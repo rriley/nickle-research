@@ -793,6 +793,7 @@ target_ulong cpu_get_phys_page_debug(CPUState *env, target_ulong addr);
 #define CPU_LOG_PCALL      (1 << 6)
 #define CPU_LOG_IOPORT     (1 << 7)
 #define CPU_LOG_TB_CPU     (1 << 8)
+#define CPU_LOG_KMODS      (1 << 9)
 
 /* define log items */
 typedef struct CPULogItem {
@@ -826,6 +827,9 @@ extern int phys_ram_size;
 extern int phys_ram_fd;
 extern uint8_t *phys_ram_base;
 extern uint8_t *phys_ram_dirty;
+
+//RDR
+extern uint8_t *phys_ram_base2;
 
 /* physical memory access */
 #define TLB_INVALID_MASK   (1 << 3)

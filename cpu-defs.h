@@ -102,7 +102,18 @@ typedef struct CPUTLBEntry {
     target_ulong addr_write; 
     target_ulong addr_code; 
     /* addend to virtual address to get physical address */
-    target_phys_addr_t addend; 
+    //target_phys_addr_t addend; 
+
+    /* As far as I can tell, the assembly code in softmmu_header.h
+     * makes a direct reference to 12 off of addr_read.  That was
+     * addend.  Now it is addend_data.  I think this is safe because
+     * the assembly is never used to reference code?  Maybe?
+     */
+    target_phys_addr_t addend_data;
+    target_phys_addr_t addend_code;
+
+    // Filler to make this structure 32 bytes.
+    unsigned char junk[12];
 } CPUTLBEntry;
 
 #define CPU_COMMON                                                      \

@@ -29,6 +29,9 @@
 #include "exec-all.h"
 #include "disas.h"
 
+// RDR
+#include "nickle.h"
+
 /* XXX: move that elsewhere */
 static uint16_t *gen_opc_ptr;
 static uint32_t *gen_opparam_ptr;
@@ -6460,7 +6463,7 @@ static inline int gen_intermediate_code_internal(CPUState *env,
     int flags, j, lj, cflags;
     target_ulong pc_start;
     target_ulong cs_base;
-    
+
     /* generate intermediate code */
     pc_start = tb->pc;
     cs_base = tb->cs_base;
@@ -6537,6 +6540,12 @@ static inline int gen_intermediate_code_internal(CPUState *env,
             gen_opc_cc_op[lj] = dc->cc_op;
             gen_opc_instr_start[lj] = 1;
         }
+
+	/* Call the NICKLE handler if appropriate. */
+	if (dc->cpl == 0) {
+		nickle_main(env,tb,pc_ptr);
+	}
+
         pc_ptr = disas_insn(dc, pc_ptr);
         /* stop translation if indicated */
         if (dc->is_jmp)

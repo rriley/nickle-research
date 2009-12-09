@@ -28,6 +28,9 @@
 //#define DEBUG
 //#define DEBUG_COMPLETION
 
+//RDR
+static void do_rkprot(int);
+
 #ifndef offsetof
 #define offsetof(type, field) ((size_t) &((type *)0)->field)
 #endif
@@ -1253,6 +1256,8 @@ static term_cmd_t term_cmds[] = {
        "capture index", "stop capture" },
     { "memsave", "lis", do_memory_save, 
       "addr size file", "save to disk virtual memory dump starting at 'addr' of size 'size'", },
+    // RDR
+    { "rkprot", "i", do_rkprot, "0/1/2/3/5", "Toggle NICKLE protection.\n\t0 - Disable NICKLE protection.\n\t1 - rewrite mode.\n\t2 - observe mode.\n\t3 - break mode.\n\t5 - copy all of standard memory to shadow memory."},
     { NULL, NULL, }, 
 };
 
@@ -2485,4 +2490,25 @@ void monitor_readline(const char *prompt, int is_password,
     while (monitor_readline_started) {
         main_loop_wait(10);
     }
+}
+
+//RDR
+extern target_ulong get_paddr(CPUState *env, target_ulong addr);
+int rkprot_flag = 0;
+static void do_rkprot(int i)
+{
+	CPUState *env;
+
+	env = mon_get_cpu();
+	tb_flush(env);
+	tlb_flush(env,1);
+
+	if (i == 5) {
+		memcpy(phys_ram_base2, phys_ram_base, phys_ram_size);		
+	}
+	else {
+		rkprot_flag = i;
+	}
+
+	term_printf("rkprot_flag = %d; phys_ram_base = %p; phys_ram_base2 = %p; diff = 0x%x\n", rkprot_flag, phys_ram_base, phys_ram_base2, (unsigned int)phys_ram_base - (unsigned int)phys_ram_base2);
 }

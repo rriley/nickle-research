@@ -167,6 +167,8 @@ typedef struct TranslationBlock {
     uint16_t size;      /* size of target code for this block (1 <=
                            size <= TARGET_PAGE_SIZE) */
     uint16_t cflags;    /* compile flags */
+    uint8_t nc;         /* No caching this block. RDR */
+
 #define CF_CODE_COPY   0x0001 /* block was generated in code copy mode */
 #define CF_TB_FP_USED  0x0002 /* fp ops are used in the TB */
 #define CF_FP_USED     0x0004 /* fp ops are used in the TB or in a chained TB */
@@ -559,6 +561,8 @@ static inline target_ulong get_phys_addr_code(CPUState *env, target_ulong addr)
 {
     int is_user, index, pd;
 
+    extern int rkprot_flag;
+
     index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
 #if defined(TARGET_I386)
     is_user = ((env->hflags & HF_CPL_MASK) == 3);
@@ -583,7 +587,11 @@ static inline target_ulong get_phys_addr_code(CPUState *env, target_ulong addr)
     if (pd > IO_MEM_ROM && !(pd & IO_MEM_ROMD)) {
         cpu_abort(env, "Trying to execute code outside RAM or ROM at 0x%08lx\n", addr);
     }
-    return addr + env->tlb_table[is_user][index].addend - (unsigned long)phys_ram_base;
+
+    if (rkprot_flag  == 3 && is_user == 0)
+	    return addr + env->tlb_table[is_user][index].addend_code - (unsigned long)phys_ram_base2;
+    else	   
+	    return addr + env->tlb_table[is_user][index].addend_code - (unsigned long)phys_ram_base;
 }
 #endif
 

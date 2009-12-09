@@ -83,6 +83,10 @@ int phys_ram_fd;
 uint8_t *phys_ram_base;
 uint8_t *phys_ram_dirty;
 
+//RDR
+uint8_t *phys_ram_base2;
+extern int rkprot_flag;
+
 CPUState *first_cpu;
 /* current CPU in the current thread. It is only valid inside
    cpu_exec() */
@@ -887,6 +891,8 @@ TranslationBlock *tb_alloc(target_ulong pc)
     tb = &tbs[nb_tbs++];
     tb->pc = pc;
     tb->cflags = 0;
+    // RDR
+    tb->nc = 0;
     return tb;
 }
 
@@ -1161,6 +1167,9 @@ CPULogItem cpu_log_items[] = {
     { CPU_LOG_IOPORT, "ioport",
       "show all i/o ports accesses" },
 #endif
+    // RDR
+    { CPU_LOG_KMODS, "kmods",
+      "show hashes of linux kernel modules" },
     { 0, NULL, NULL },
 };
 
@@ -1330,7 +1339,7 @@ static inline void tlb_reset_dirty_range(CPUTLBEntry *tlb_entry,
 {
     unsigned long addr;
     if ((tlb_entry->addr_write & ~TARGET_PAGE_MASK) == IO_MEM_RAM) {
-        addr = (tlb_entry->addr_write & TARGET_PAGE_MASK) + tlb_entry->addend;
+        addr = (tlb_entry->addr_write & TARGET_PAGE_MASK) + tlb_entry->addend_data;
         if ((addr - start) < length) {
             tlb_entry->addr_write = (tlb_entry->addr_write & TARGET_PAGE_MASK) | IO_MEM_NOTDIRTY;
         }
@@ -1414,7 +1423,7 @@ static inline void tlb_update_dirty(CPUTLBEntry *tlb_entry)
 
     if ((tlb_entry->addr_write & ~TARGET_PAGE_MASK) == IO_MEM_RAM) {
         ram_addr = (tlb_entry->addr_write & TARGET_PAGE_MASK) + 
-            tlb_entry->addend - (unsigned long)phys_ram_base;
+            tlb_entry->addend_data - (unsigned long)phys_ram_base;
         if (!cpu_physical_memory_is_dirty(ram_addr)) {
             tlb_entry->addr_write |= IO_MEM_NOTDIRTY;
         }
@@ -1436,7 +1445,7 @@ static inline void tlb_set_dirty1(CPUTLBEntry *tlb_entry,
 {
     unsigned long addr;
     if ((tlb_entry->addr_write & ~TARGET_PAGE_MASK) == IO_MEM_NOTDIRTY) {
-        addr = (tlb_entry->addr_write & TARGET_PAGE_MASK) + tlb_entry->addend;
+        addr = (tlb_entry->addr_write & TARGET_PAGE_MASK) + tlb_entry->addend_data;
         if (addr == start) {
             tlb_entry->addr_write = (tlb_entry->addr_write & TARGET_PAGE_MASK) | IO_MEM_RAM;
         }
@@ -1468,9 +1477,11 @@ int tlb_set_page_exec(CPUState *env, target_ulong vaddr,
     unsigned long pd;
     unsigned int index;
     target_ulong address;
-    target_phys_addr_t addend;
+    target_phys_addr_t addend_code;
+    target_phys_addr_t addend_data;
     int ret;
     CPUTLBEntry *te;
+    int cpl = (env->hflags >> HF_CPL_SHIFT) & 3;
 
     p = phys_page_find(paddr >> TARGET_PAGE_BITS);
     if (!p) {
@@ -1491,17 +1502,26 @@ int tlb_set_page_exec(CPUState *env, target_ulong vaddr,
         if ((pd & ~TARGET_PAGE_MASK) > IO_MEM_ROM && !(pd & IO_MEM_ROMD)) {
             /* IO memory case */
             address = vaddr | pd;
-            addend = paddr;
+            addend_code = paddr;
+	    addend_data = paddr;
         } else {
             /* standard memory */
             address = vaddr;
-            addend = (unsigned long)phys_ram_base + (pd & TARGET_PAGE_MASK);
+	    addend_data = (unsigned long)phys_ram_base + (pd & TARGET_PAGE_MASK);
+	    if (rkprot_flag == 3 && cpl == 0) {
+		    addend_code = (unsigned long)phys_ram_base2 + (pd & TARGET_PAGE_MASK);
+	    }
+	    else {
+		    addend_code = (unsigned long)phys_ram_base + (pd & TARGET_PAGE_MASK); 
+	    }
         }
         
         index = (vaddr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
-        addend -= vaddr;
+        addend_code -= vaddr;
+	addend_data -= vaddr;
         te = &env->tlb_table[is_user][index];
-        te->addend = addend;
+        te->addend_code = addend_code;
+	te->addend_data = addend_data;
         if (prot & PAGE_READ) {
             te->addr_read = address;
         } else {

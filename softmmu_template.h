@@ -42,9 +42,11 @@
 #ifdef SOFTMMU_CODE_ACCESS
 #define READ_ACCESS_TYPE 2
 #define ADDR_READ addr_code
+#define ADDEND    addend_code
 #else
 #define READ_ACCESS_TYPE 0
 #define ADDR_READ addr_read
+#define ADDEND    addend_data
 #endif
 
 static DATA_TYPE glue(glue(slow_ld, SUFFIX), MMUSUFFIX)(target_ulong addr, 
@@ -83,14 +85,14 @@ DATA_TYPE REGPARM(1) glue(glue(__ld, SUFFIX), MMUSUFFIX)(target_ulong addr,
     target_ulong tlb_addr;
     target_phys_addr_t physaddr;
     void *retaddr;
-    
+
     /* test if there is match for unaligned or IO access */
     /* XXX: could done more in memory macro in a non portable way */
     index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
  redo:
     tlb_addr = env->tlb_table[is_user][index].ADDR_READ;
     if ((addr & TARGET_PAGE_MASK) == (tlb_addr & (TARGET_PAGE_MASK | TLB_INVALID_MASK))) {
-        physaddr = addr + env->tlb_table[is_user][index].addend;
+        physaddr = addr + env->tlb_table[is_user][index].ADDEND;
         if (tlb_addr & ~TARGET_PAGE_MASK) {
             /* IO access */
             if ((addr & (DATA_SIZE - 1)) != 0)
@@ -142,7 +144,7 @@ static DATA_TYPE glue(glue(slow_ld, SUFFIX), MMUSUFFIX)(target_ulong addr,
  redo:
     tlb_addr = env->tlb_table[is_user][index].ADDR_READ;
     if ((addr & TARGET_PAGE_MASK) == (tlb_addr & (TARGET_PAGE_MASK | TLB_INVALID_MASK))) {
-        physaddr = addr + env->tlb_table[is_user][index].addend;
+        physaddr = addr + env->tlb_table[is_user][index].ADDEND;
         if (tlb_addr & ~TARGET_PAGE_MASK) {
             /* IO access */
             if ((addr & (DATA_SIZE - 1)) != 0)
@@ -217,12 +219,12 @@ void REGPARM(2) glue(glue(__st, SUFFIX), MMUSUFFIX)(target_ulong addr,
     target_ulong tlb_addr;
     void *retaddr;
     int index;
-    
+
     index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
  redo:
     tlb_addr = env->tlb_table[is_user][index].addr_write;
     if ((addr & TARGET_PAGE_MASK) == (tlb_addr & (TARGET_PAGE_MASK | TLB_INVALID_MASK))) {
-        physaddr = addr + env->tlb_table[is_user][index].addend;
+        physaddr = addr + env->tlb_table[is_user][index].ADDEND;
         if (tlb_addr & ~TARGET_PAGE_MASK) {
             /* IO access */
             if ((addr & (DATA_SIZE - 1)) != 0)
@@ -273,7 +275,7 @@ static void glue(glue(slow_st, SUFFIX), MMUSUFFIX)(target_ulong addr,
  redo:
     tlb_addr = env->tlb_table[is_user][index].addr_write;
     if ((addr & TARGET_PAGE_MASK) == (tlb_addr & (TARGET_PAGE_MASK | TLB_INVALID_MASK))) {
-        physaddr = addr + env->tlb_table[is_user][index].addend;
+        physaddr = addr + env->tlb_table[is_user][index].ADDEND;
         if (tlb_addr & ~TARGET_PAGE_MASK) {
             /* IO access */
             if ((addr & (DATA_SIZE - 1)) != 0)
@@ -311,3 +313,4 @@ static void glue(glue(slow_st, SUFFIX), MMUSUFFIX)(target_ulong addr,
 #undef USUFFIX
 #undef DATA_SIZE
 #undef ADDR_READ
+#undef ADDEND

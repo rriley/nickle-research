@@ -205,6 +205,7 @@ static inline TranslationBlock *tb_find_fast(void)
 #else
 #error unsupported CPU
 #endif
+ again:
     tb = env->tb_jmp_cache[tb_jmp_cache_hash_func(pc)];
     if (__builtin_expect(!tb || tb->pc != pc || tb->cs_base != cs_base ||
                          tb->flags != flags, 0)) {
@@ -217,6 +218,28 @@ static inline TranslationBlock *tb_find_fast(void)
                must recompute the hash index here */
             T0 = 0;
         }
+    }
+    // RDR
+    if (tb->nc == 1) {
+	    /* First time out of the gate we need to use
+	       this TB.  After that, blow it away. */	    
+	    tb->nc++;
+    }
+    else if (tb->nc > 1) {
+	    /*
+	    extern uint32_t get_laddr(CPUState *env, target_ulong addr, void *offset);
+	    ram_addr_t ram_addr;
+	    ram_addr = get_laddr(env, tb->pc, 0);
+	    ram_addr = (ram_addr & TARGET_PAGE_MASK) | (tb->pc & ~TARGET_PAGE_MASK);
+	    tb_invalidate_phys_page_range(ram_addr, ram_addr + 1, 0);
+	    //tb->nc = 0;
+	    */
+
+	    /* Because I can't figure out how to flush a single TB entry
+	       I end up with this dirty hack.  Whenever we see a TB
+	       entry that should not be cached, just flush the whole cache. */
+	    tb_flush(env);
+	    goto again;
     }
     return tb;
 }

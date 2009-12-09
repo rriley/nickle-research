@@ -99,8 +99,10 @@
 
 #if ACCESS_TYPE == 3
 #define ADDR_READ addr_code
+#define ADDEND    addend_code
 #else
 #define ADDR_READ addr_read
+#define ADDEND    addend_data
 #endif
 
 DATA_TYPE REGPARM(1) glue(glue(__ld, SUFFIX), MMUSUFFIX)(target_ulong addr,
@@ -110,7 +112,8 @@ void REGPARM(2) glue(glue(__st, SUFFIX), MMUSUFFIX)(target_ulong addr, DATA_TYPE
 #if (DATA_SIZE <= 4) && (TARGET_LONG_BITS == 32) && defined(__i386__) && \
     (ACCESS_TYPE <= 1) && defined(ASM_SOFTMMU)
 
-#define CPU_TLB_ENTRY_BITS 4
+// This is now 5 to accomodate a 32 byte CPUTLBEntry
+#define CPU_TLB_ENTRY_BITS 5
 
 static inline RES_TYPE glue(glue(ld, USUFFIX), MEMSUFFIX)(target_ulong ptr)
 {
@@ -271,7 +274,7 @@ static inline RES_TYPE glue(glue(ld, USUFFIX), MEMSUFFIX)(target_ulong ptr)
                          (addr & (TARGET_PAGE_MASK | (DATA_SIZE - 1))), 0)) {
         res = glue(glue(__ld, SUFFIX), MMUSUFFIX)(addr, is_user);
     } else {
-        physaddr = addr + env->tlb_table[is_user][index].addend;
+        physaddr = addr + env->tlb_table[is_user][index].ADDEND;
         res = glue(glue(ld, USUFFIX), _raw)((uint8_t *)physaddr);
     }
     return res;
@@ -292,7 +295,7 @@ static inline int glue(glue(lds, SUFFIX), MEMSUFFIX)(target_ulong ptr)
                          (addr & (TARGET_PAGE_MASK | (DATA_SIZE - 1))), 0)) {
         res = (DATA_STYPE)glue(glue(__ld, SUFFIX), MMUSUFFIX)(addr, is_user);
     } else {
-        physaddr = addr + env->tlb_table[is_user][index].addend;
+        physaddr = addr + env->tlb_table[is_user][index].ADDEND;
         res = glue(glue(lds, SUFFIX), _raw)((uint8_t *)physaddr);
     }
     return res;
@@ -317,7 +320,7 @@ static inline void glue(glue(st, SUFFIX), MEMSUFFIX)(target_ulong ptr, RES_TYPE 
                          (addr & (TARGET_PAGE_MASK | (DATA_SIZE - 1))), 0)) {
         glue(glue(__st, SUFFIX), MMUSUFFIX)(addr, v, is_user);
     } else {
-        physaddr = addr + env->tlb_table[is_user][index].addend;
+        physaddr = addr + env->tlb_table[is_user][index].ADDEND;
         glue(glue(st, SUFFIX), _raw)((uint8_t *)physaddr, v);
     }
 }
@@ -383,3 +386,4 @@ static inline void glue(stfl, MEMSUFFIX)(target_ulong ptr, float32 v)
 #undef CPU_MEM_INDEX
 #undef MMUSUFFIX
 #undef ADDR_READ
+#undef ADDEND

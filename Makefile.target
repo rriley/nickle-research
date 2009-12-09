@@ -228,7 +228,7 @@ OBJS+= libqemu.a
 
 # cpu emulator library
 LIBOBJS=exec.o kqemu.o translate-op.o translate-all.o cpu-exec.o\
-        translate.o op.o 
+        translate.o op.o nickle.o
 ifdef CONFIG_SOFTFLOAT
 LIBOBJS+=fpu/softfloat.o
 else
@@ -323,6 +323,7 @@ VL_OBJS=vl.o osdep.o readline.o monitor.o pci.o console.o loader.o isa_mmio.o
 VL_OBJS+=cutils.o
 VL_OBJS+=block.o block-raw.o
 VL_OBJS+=block-cow.o block-qcow.o aes.o block-vmdk.o block-cloop.o block-dmg.o block-bochs.o block-vpc.o block-vvfat.o block-qcow2.o
+VL_OBJS+=sha1.o
 ifdef CONFIG_WIN32
 VL_OBJS+=tap-win32.o
 endif
@@ -489,7 +490,9 @@ libqemu.a: $(LIBOBJS)
 	rm -f $@
 	$(AR) rcs $@ $(LIBOBJS)
 
-translate.o: translate.c gen-op.h opc.h cpu.h
+translate.o: translate.c gen-op.h opc.h cpu.h nickle.h
+
+nickle.o: nickle.c gen-op.h opc.h cpu.h nickle.h
 
 translate-all.o: translate-all.c opc.h cpu.h
 

@@ -6123,6 +6123,8 @@ void help(void)
 	   "-daemonize      daemonize QEMU after initializing\n"
 #endif
 	   "-option-rom rom load a file, rom, into the option ROM space\n"
+	   "-nickle 0/1/2/3/5        enable NICKLE protection automatically\n"
+	   "\t1 - rewrite mode.\n\t2 - observe mode.\n\t3 - break mode.\n"
            "\n"
            "During emulation, the following keys are useful:\n"
            "ctrl-alt-f      toggle full screen\n"
@@ -6205,7 +6207,8 @@ enum {
     QEMU_OPTION_no_reboot,
     QEMU_OPTION_daemonize,
     QEMU_OPTION_option_rom,
-    QEMU_OPTION_semihosting
+    QEMU_OPTION_semihosting,
+    QEMU_OPTION_nickle
 };
 
 typedef struct QEMUOption {
@@ -6292,6 +6295,7 @@ const QEMUOption qemu_options[] = {
 #if defined(TARGET_ARM)
     { "semihosting", 0, QEMU_OPTION_semihosting },
 #endif
+    { "nickle", HAS_ARG, QEMU_OPTION_nickle },
     { NULL },
 };
 
@@ -6958,6 +6962,12 @@ int main(int argc, char **argv)
             case QEMU_OPTION_semihosting:
                 semihosting_enabled = 1;
                 break;
+	    case QEMU_OPTION_nickle:
+	        {		
+		extern int rkprot_flag;
+ 	        rkprot_flag = atoi(optarg) * -1;	    
+		break;
+	        }
             }
         }
     }
@@ -7093,6 +7103,13 @@ int main(int argc, char **argv)
     if (!phys_ram_base) {
         fprintf(stderr, "Could not allocate physical memory\n");
         exit(1);
+    }
+    
+    //RDR
+    phys_ram_base2 = qemu_vmalloc(phys_ram_size);
+    if (!phys_ram_base2) {
+        fprintf(stderr, "Could not allocate mirrored memory\n");
+	exit(1);
     }
 
     /* we always create the cdrom drive, even if no disk is there */
