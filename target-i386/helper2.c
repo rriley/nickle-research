@@ -1041,10 +1041,12 @@ target_ulong get_paddr(CPUState *env, target_ulong addr)
 	return cpu_get_phys_page_debug(env, addr) | (addr & ~PHYS_ADDR_MASK);
 }
 
-uint32_t get_laddr(CPUState *env, target_ulong addr, void *offset)
-{
-	target_ulong modp;
 
-	modp = get_paddr(env, addr);
-	return cpu_get_physical_page_desc(modp) + (uint32_t)offset;
+void * get_laddr(CPUState *env, target_ulong addr, void *offset)
+{
+        target_ulong modp;
+	void * res;
+        modp = get_paddr(env, addr);
+	res = (void *)(modp + (unsigned long)offset);
+	return res;
 }

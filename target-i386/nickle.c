@@ -41,6 +41,9 @@ void nickle_main(CPUState *env, TranslationBlock *tb, target_ulong pc_ptr)
 {
 	target_ulong tpc;
 
+	if (pc_ptr == 0xfffffff0)
+		return;
+
 	tpc = get_paddr(env,pc_ptr);
 
 	if (phys_ram_base[tpc] != phys_ram_base2[tpc]) {
@@ -74,19 +77,19 @@ void nickle_main(CPUState *env, TranslationBlock *tb, target_ulong pc_ptr)
 		if (!(*uptr > MODSB && *uptr < MODSE) 
 		    || !verify_copy_module(env, tb, env->regs[MODREG]))
 		{
-			/* Rewrite mode */
+			// Rewrite mode
 			if (rkprot_flag == 1) {
 				printf("Unauthorized code execution @ " 
 				       TARGET_FMT_lx "\n", pc_ptr);
 				rewrite_code(env,tpc);
 				printf("\tCode successfully rewritten\n");
 			}
-			/* Observe mode and Break mode */
+			// Observe mode and Break mode
 			else if (rkprot_flag == 2 || rkprot_flag == 3) {
 				printf("Unauthorized code execution @ " 
 				       TARGET_FMT_lx "\n", pc_ptr);
 			}
-		}			
+		}
 	}
 	
 	/* The following 'if' has a hardcoded address taken
@@ -253,7 +256,7 @@ int verify_copy_module(CPUState *env, TranslationBlock *tb, target_ulong mod_vad
 	unsigned long header;
 	unsigned char sha1sum[20];
 	unsigned char tmpsum[20];
-	
+
 	/* Don't cache this block later...
 	 * Jump over to cpu-exec.c:tb_find_fast to
 	 * get an idea of what this does to the TB cache.
@@ -269,17 +272,19 @@ int verify_copy_module(CPUState *env, TranslationBlock *tb, target_ulong mod_vad
 	 */
 	
 	// Get the size of the module and allocate local space for it.
-	t = (void *)get_laddr(env, mod_vaddr, phys_ram_base);
+	t = get_laddr(env, mod_vaddr, phys_ram_base);
+
 	len = *(t+3);
+
 	header = *t;
 	mod = malloc(len);
 	if (!mod) {
 		printf("Could not allocate memory.\n");
 		goto nope_nf;
 	}
-	
+
 	// Get the name...
-	name = (char *)(get_laddr(env, *(t+2), phys_ram_base) | (*(t+2) & 0xfff));
+	name = (void *)((unsigned long)get_laddr(env, *(t+2), phys_ram_base) | (*(t+2) & 0xfff));
 	
 	/* The file containing config info...
 	 * This is NOT a secure way to determine the config file name
@@ -338,7 +343,7 @@ int verify_copy_module(CPUState *env, TranslationBlock *tb, target_ulong mod_vad
 			tc = 4096;
 					
 		// Copy
-		pd = get_laddr(env, tmp, phys_ram_base);
+		pd = (unsigned long)get_laddr(env, tmp, phys_ram_base);
 		pd |= (tmp & 0xfff);
 		memcpy(mod + modc, (char *)pd, tc);
 		modc += tc;
@@ -401,9 +406,9 @@ int verify_copy_module(CPUState *env, TranslationBlock *tb, target_ulong mod_vad
 				tc = 4096;
 			
 			// Copy bytes
-			pd = get_laddr(env, tmp, phys_ram_base);
+			pd = (unsigned long)get_laddr(env, tmp, phys_ram_base);
 			pd |= (tmp & 0xfff);
-			pd2 = get_laddr(env, tmp, phys_ram_base2);
+			pd2 = (unsigned long)get_laddr(env, tmp, phys_ram_base2);
 			pd2 |= (tmp & 0xfff);
 
 			memcpy((void *)pd2, (void *)pd, tc);

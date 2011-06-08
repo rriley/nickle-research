@@ -1,5 +1,5 @@
 extern target_ulong get_paddr(CPUState *env, target_ulong addr);
-extern uint32_t get_laddr(CPUState *env, target_ulong addr, void *offset);
+extern void * get_laddr(CPUState *env, target_ulong addr, void *offset);
 extern int rkprot_flag;
 
 int verify_copy_kernel(CPUState *env, TranslationBlock *tb);
